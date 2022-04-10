@@ -1,7 +1,6 @@
 import { storage } from "../firebase-config";
 import { ref, listAll, getDownloadURL, deleteObject } from "firebase/storage";
 import { Card, Container } from "react-bootstrap";
-import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Sound from "./Sound";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,34 +15,42 @@ const Sounds = () => {
 
   const db = getFirestore();
   let userRef;
-  if (currentUser) {
-    userRef = doc(db, "users", currentUser.uid);
-  }
+  if (currentUser) userRef = doc(db, "users", currentUser.uid);
 
   const getCurrentUserName = async () => {
-    const userSnap = await getDoc(userRef);
-    setCurrentUserName(userSnap.data().username);
+    try {
+      const userSnap = await getDoc(userRef);
+      setCurrentUserName(userSnap.data().username);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   useEffect(() => {
-    if (currentUser) getCurrentUserName();
+    if (currentUser) {
+      getCurrentUserName();
+    }
   }, []);
 
   useEffect(() => {
-    let isCancelled = false;
+    let mounted = true;
 
     const getSounds = async () => {
       try {
         const response = await listAll(soundsListAllRef);
-        if (!isCancelled) {
+        if (mounted) {
           response.items.forEach((item) => {
             const username = item.fullPath.split("/")[2].split("~")[0];
             const date = item.fullPath.split("/")[2].split("~")[1];
             const filename = item.fullPath.split("/")[2].split("~")[2];
 
+            // sound file ref in all
             const fileAllRef = ref(storage, item.fullPath);
+
             const fileAllPathArray = item.fullPath.split("/");
             fileAllPathArray.splice(1, 1, username);
+
+            // sound file ref in user
             const fileUserRef = ref(storage, fileAllPathArray.join("/"));
 
             getDownloadURL(item)
@@ -59,13 +66,12 @@ const Sounds = () => {
       } catch (err) {
         console.log(err);
       }
-
-      getSounds();
     };
+    getSounds();
 
     // CLEANUP FUNCTION
     return () => {
-      isCancelled = true;
+      mounted = false;
     };
   }, [currentUserName]);
 
@@ -73,8 +79,6 @@ const Sounds = () => {
     await deleteObject(soundRef);
     setSoundsList(
       soundsList.filter(
-        //
-        // (sound.fileAllRef != sound.fileUserRef) != soundRef
         (sound) =>
           soundRef !== sound.fileUserRef &&
           soundRef !== sound.fileAllRef &&
