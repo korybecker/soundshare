@@ -6,11 +6,9 @@ const Navbar = () => {
   return (
     <nav className="navbar bg-light container">
       <h4>
-        {currentUser && (
-          <Link className="link" to="/">
-            Profile
-          </Link>
-        )}
+        <Link className="link" to="/">
+          <img src="logo3.png" width="80px" />
+        </Link>
       </h4>
       <h4>
         <Link className="link" to="/sounds">
